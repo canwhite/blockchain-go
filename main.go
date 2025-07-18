@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 )
 
+//block struct
 type Block struct{
 	Index int
 	TimeStamp string
@@ -14,7 +17,17 @@ type Block struct{
 }
 
 //generate hash
-// func calculateHash(block Block) string{}
+func calculateHash(block Block) string{
+	record := fmt.Sprint(block.Index) + block.TimeStamp + fmt.Sprint(block.BPM) + block.PrevHash
+	h := sha256.New()
+	h.Write([]byte(record))
+	// Sum方法计算并返回SHA-256哈希值，nil参数表示将结果存储在新的字节切片中
+	// Sum方法会将当前哈希状态与输入数据（这里为nil）进行最终计算，返回哈希结果
+	hashed := h.Sum(nil)
+	return hex.EncodeToString(hashed)
+}
+
+
 
 
 
