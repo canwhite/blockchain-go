@@ -166,6 +166,7 @@ func respondWithJSON(w http.ResponseWriter,r *http.Request, code int, payload in
 //POST:
 //curl -X POST http://127.0.0.1:8080 -H "Content-Type: application/json" -d '{"BPM":60}'
 func main() {
+	//先获取.env中的内容
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal(err)
