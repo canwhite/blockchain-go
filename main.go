@@ -22,8 +22,7 @@ func calculateHash(block Block) string{
 	record := fmt.Sprint(block.Index) + block.Timestamp + fmt.Sprint(block.BPM) + block.PrevHash
 	h := sha256.New()
 	h.Write([]byte(record))
-	// Sum方法计算并返回SHA-256哈希值，nil参数表示将结果存储在新的字节切片中
-	// Sum方法会将当前哈希状态与输入数据（这里为nil）进行最终计算，返回哈希结果
+	//nil as input， this method concatenates record 
 	hashed := h.Sum(nil)
 	return hex.EncodeToString(hashed)
 }
@@ -40,7 +39,25 @@ func generateBlock(oldBlock Block, BPM int) (Block,error){
 	return newBlock, nil 
 }
 
+//verify block
+func isBlockValid(newBlock Block, oldBlock Block) bool {
+	//index
+	//no parenthesis
+	if oldBlock.Index +1 != newBlock.Index {
+		return false
+	}
+	//hash
+	if oldBlock.Hash != newBlock.PrevHash {
+		return false
+	}
+	
+	//double check
+	if calculateHash(newBlock) != newBlock.Hash{
+		return false
+	}
 
+	return true
+}
 
 
 
