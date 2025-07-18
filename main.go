@@ -80,7 +80,7 @@ func replaceChain(newBlocks []Block) {
 func run() error{
 	mux := makeMuxRouter()
 	httpAddr := os.Getenv("ADDR")
-	log.Println("Listening on ", os.Getenv("ADDR"))
+	//所有方法传入的都是引用
 	s := &http.Server{
 		Addr:           ":" + httpAddr,
 		Handler:        mux,
@@ -88,7 +88,7 @@ func run() error{
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-
+	//if的承接写法
 	if err := s.ListenAndServe(); err != nil {
 		return err
 	}
