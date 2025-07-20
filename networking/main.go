@@ -131,7 +131,6 @@ func handleConn(conn net.Conn){
 
 	//take in BPM from stdin and add it to blockchain after conducting necessary validation
 	// go must after a func call
-	// go是携程的意思，后接一个自执行函数
 	go func ()  {
 		for scanner.Scan(){
 			bpm, err := strconv.Atoi(scanner.Text())
@@ -155,11 +154,11 @@ func handleConn(conn net.Conn){
 	}()
 
 	// simulate receiving broadcast	
+	//通过在一个独立的 goroutine 中周期性地将区块链数据（Blockchain）序列化为 JSON 格式并发送到 TCP 连接（conn）
 	go func ()  {
-		//类似while(true)
+		//like while(true)
 		for{	
 			time.Sleep(30 * time.Second)
-			//注意这里是转json，实际上是一个byte[]
 			output, err := json.Marshal(Blockchain)
 			if err != nil {
 				log.Fatal(err)
@@ -170,14 +169,15 @@ func handleConn(conn net.Conn){
 	}()
 	
 	// 这里是一个无限循环，用于持续监听bcServer通道的消息
-	// bcServer是一个通道，当有新的区块链数据时会被发送到这个通道
-	// 每次接收到新的区块链数据时，使用spew.Dump打印出当前的区块链状态
-	// 这种设计模式常用于实时更新和监控区块链的状态变化
+	// watch
+	// 这里使用 = 而不是 := 是因为 bcServer 已经在外部声明过了
+	// := 是声明并赋值的简写形式，而 = 只是赋值操作
+	// 在这个上下文中，我们只需要从 bcServer 通道接收值，不需要重新声明变量
 	for _ = range bcServer {
 		spew.Dump(Blockchain)
 	}
 
-	
+
 }
 
 
