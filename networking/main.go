@@ -180,4 +180,18 @@ func handleConn(conn net.Conn){
 
 }
 
+//how to use
+//1.服务端启动之后，客户端通过nc localhost 9000，连上，然后输入BPM
+//2.服务端接收到信息，然后新增区块，最终输入到bcServer通道
+//3.广播的模拟，就是过段时间就输出一下BlockChain
+//PS：注意数据的监听用的for range
+// 这里使用 `for _ = range bcServer` 而不是 `xx := <-bcServer` 的原因如下：
 
+// 如果需要使用通道传递的具体值，可以使用以下方式：
+/** 
+for value := range bcServer {
+    // 在这里可以使用 value 变量
+    spew.Dump(value)
+    // 其他处理逻辑...
+}
+*/
