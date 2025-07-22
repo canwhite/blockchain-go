@@ -173,7 +173,7 @@ func handleConn(conn net.Conn){
 	// 这里使用 = 而不是 := 是因为 bcServer 已经在外部声明过了
 	// := 是声明并赋值的简写形式，而 = 只是赋值操作
 	// 在这个上下文中，我们只需要从 bcServer 通道接收值，不需要重新声明变量
-	for _ = range bcServer {
+	for range bcServer {
 		spew.Dump(Blockchain)
 	}
 
