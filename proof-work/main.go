@@ -1,15 +1,22 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 const difficulty = 1
 
@@ -95,9 +102,112 @@ func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload i
 }
 
 func handleWriteBlock(w http.ResponseWriter, r * http.Request){
-	
+	w.Header().Set("Content-Type","application/json")
+	var m Message //Message是传过来的
+	decoder := json.NewDecoder(r.Body)
+	//报错提前处理
+	if err:= decoder.Decode(&m); err != nil{
+		//如果报错直接将payload发回去
+		respondWithJSON(w,r,http.StatusBadRequest,r.Body)
+		return
+	}
+	defer r.Body.Close()
 
+	//ensure atomicity when creating new block 
+	mutex.Lock()
 
+	newBlock := generateBlock(Blockchain[len(Blockchain)-1], m.BPM)
+	mutex.Unlock()
 
+	if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+		Blockchain = append(Blockchain, newBlock)
+		spew.Dump(Blockchain)
+	}   
+	respondWithJSON(w, r, http.StatusCreated, newBlock)
+
+}	
+
+func isBlockValid(newBlock, oldBlock Block) bool {
+	if oldBlock.Index+1 != newBlock.Index {
+			return false
+	}
+
+	if oldBlock.Hash != newBlock.PrevHash {
+			return false
+	}
+
+	if calculateHash(newBlock) != newBlock.Hash {
+			return false
+	}
+
+	return true
 }
+
+func calculateHash(block Block) string {
+	record := strconv.Itoa(block.Index) + block.Timestamp + strconv.Itoa(block.BPM) + block.PrevHash + block.Nonce
+	h := sha256.New()
+	h.Write([]byte(record))
+	hashed := h.Sum(nil)
+	return hex.EncodeToString(hashed)
+}
+
+
+//distinguish hash valid with block valid
+func isHashValid(hash string, difficulty int) bool{
+	//difficulty is repeating count
+	prefix := strings.Repeat("0",difficulty)
+	return strings.HasPrefix(hash, prefix)
+}
+
+
+//perhaps need to change , generate block 
+func generateBlock(oldBlock Block, BPM int) Block{
+	var newBlock Block
+	t := time.Now()
+
+	newBlock.Index = oldBlock.Index +1
+	newBlock.Timestamp = t.String()
+	newBlock.BPM = BPM
+	newBlock.PrevHash = oldBlock.Hash
+	newBlock.Difficulty = difficulty
+
+	//需要一直算下去
+	for i := 0 ; ; i++{
+		//将i转化字符串
+		hex := fmt.Sprintf("%x", i)
+        newBlock.Nonce = hex
+		if !isHashValid(calculateHash(newBlock),newBlock.Difficulty){
+			fmt.Println(calculateHash(newBlock), " do more work!")
+			time.Sleep(time.Second)
+			continue
+		}else {
+			fmt.Println(calculateHash(newBlock), " work done!")
+            newBlock.Hash = calculateHash(newBlock)
+            break
+		}
+	}
+	return newBlock
+}
+
+func main(){
+	//这里Load，在要使用的时候Getenv
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}   
+	
+	go func(){
+		t := time.Now()
+		genesisBlock := Block{}
+		genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), "", difficulty, ""} 
+		spew.Dump(genesisBlock)
+
+		mutex.Lock()
+		Blockchain = append(Blockchain, genesisBlock)
+		mutex.Unlock()
+	}()
+
+	log.Fatal(run())
+}
+
 
