@@ -175,6 +175,7 @@ func generateBlock(oldBlock Block, BPM int) Block{
 	for i := 0 ; ; i++{
 		//将i转化字符串
 		hex := fmt.Sprintf("%x", i)
+		//通过改变Nonce，再对block算哈希，看是否满足情况
         newBlock.Nonce = hex
 		if !isHashValid(calculateHash(newBlock),newBlock.Difficulty){
 			fmt.Println(calculateHash(newBlock), " do more work!")
@@ -209,5 +210,15 @@ func main(){
 
 	log.Fatal(run())
 }
+/** 
+比特币的工作证明验证机制：
+
+不只是简单检查前导0个数，而是使用目标阈值(target)比较
+区块哈希必须小于当前网络目标值(target)才被视为有效
+目标值是一个256位数字，通过难度值计算得出
+前导0个数只是目标值的一种可视化表现方式
+比特币的难度调整算法更精确(BTC每2016个区块调整一次)
+实际实现通过比较哈希数值是否小于目标数值，而非仅看前导0
+*/
 
 
