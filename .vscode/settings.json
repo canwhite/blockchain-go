@@ -1,0 +1,9 @@
+{
+  "gopls": {
+    "diagnostics": {
+      "disable": {
+        "unknown_directive": true
+      }
+    }
+  }
+}
