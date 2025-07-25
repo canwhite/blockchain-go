@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	net "github.com/libp2p/go-libp2p-net"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
 	host "github.com/libp2p/go-libp2p/core/host"
 	ma "github.com/multiformats/go-multiaddr"
@@ -170,3 +172,24 @@ func makeBasicHost(listenPort int, secio bool, randseed int64)(host.Host, error)
 
 	return basicHost, nil
 }
+
+//处理输入数据流
+func handleStream(s net.Stream){
+	log.Println("Got a new stream!")
+	//creating a buffer stream for non blocking read and write
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	go readData(rw)
+	go writeData(rw)
+	// stream 's' will stay open until you close it (or the other side closes it).
+}
+
+
+func readData(rw  *bufio.ReadWriter){
+	//todo
+
+}
+func writeData(rw * bufio.ReadWriter){
+	//todo
+}
+
+
