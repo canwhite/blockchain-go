@@ -1,11 +1,21 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"io"
+	"log"
+	mrand "math/rand"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/libp2p/go-libp2p"
+	crypto "github.com/libp2p/go-libp2p/core/crypto"
+	host "github.com/libp2p/go-libp2p/core/host"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 // Block represents each 'item' in the blockchain
@@ -88,3 +98,75 @@ NAT是一种将私有 IP 地址（如 192.168.x.x）映射到公网 IP 地址的
 NAT 穿透是指通过技术手段（如协议或中继）让两个或多个 NAT 后的节点直接通信，绕过 NAT 或防火墙的限制。
 
 */
+
+
+// makeBasicHost creates a LibP2P host with a random peer ID listening on the
+// given multiaddress. It will use secio if secio is true.
+// secio 是 go-libp2p 中用于安全通信的一种加密协议，全称是 Secure Communication
+
+func makeBasicHost(listenPort int, secio bool, randseed int64)(host.Host, error){
+	
+	// If the seed is zero, use real cryptographic randomness. Otherwise, use a
+	// deterministic randomness source to make generated keys stay the same
+	// across multiple runs
+	var r io.Reader
+	//实际上是为了区分生产和调试环境，randseed == 0, 使用真呢真难过的随机性
+	if randseed == 0 {
+		r = rand.Reader
+	} else {
+		//伪随机数生成器的确定性：当使用相同的种子初始化math/rand的随机数生成器时，
+		//它总是会产生完全相同的随机数序列。这在测试中非常有用，因为你可以重现完全相同的行为。
+		r = mrand.New(mrand.NewSource(randseed))
+	}
+
+	// Generate a key pair for this host. We will use it
+	// to obtain a valid host ID.
+	// GenerateKeyPairWithReader 参数说明:
+	// 1. crypto.RSA - 密钥类型，这里使用 RSA 算法
+	// 2. 2048 - 密钥长度，2048位是当前推荐的安全强度
+	// 3. r - 随机源，前面根据 randseed 决定使用真随机还是伪随机
+	// 返回结果:
+	// priv - 生成的私钥对象，用于节点身份验证和加密通信
+	// pub - 生成的公钥(这里用 _ 忽略)，用于派生节点ID(PeerID)
+	// err - 错误对象，如果密钥生成失败会返回非nil值
+	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
+	if err != nil {
+		return nil,err 
+	}
+
+	// 这段代码创建了一个基本的LibP2P主机配置选项:
+	// 1. 监听本地127.0.0.1地址和指定端口
+	// 2. 使用前面生成的私钥作为节点身份标识
+	// 这些选项将传递给libp2p.New()函数来创建实际的P2P主机
+	opts := []libp2p.Option{
+		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", listenPort)),
+		libp2p.Identity(priv),
+	}
+
+	if !secio {
+		opts = append(opts, libp2p.NoSecurity)
+	}
+
+	basicHost, err := libp2p.New(opts...)
+	
+	if err != nil {
+		return nil, err
+	}
+
+	// Build host multiaddress
+	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", basicHost.ID().String()))
+
+	// Now we can build a full multiaddress to reach this host
+	// by encapsulating both addresses:
+	addr := basicHost.Addrs()[0]
+	//en进入 capsule胶囊，合到一起就是概括
+	fullAddr := addr.Encapsulate(hostAddr)
+	log.Printf("I am %s\n", fullAddr)
+	if secio {
+		log.Printf("Now run \"go run main.go -l %d -d %s -secio\" on a different terminal\n", listenPort+1, fullAddr)
+	} else {
+		log.Printf("Now run \"go run main.go -l %d -d %s\" on a different terminal\n", listenPort+1, fullAddr)
+	}
+
+	return basicHost, nil
+}
