@@ -70,6 +70,10 @@ for _, block := range temp {
 选择阶段：pickWinner进行权益证明选择
 提交阶段：将获胜区块添加到主链
 通知阶段：广播最新状态
+
+设计模式：
+构造器模式
+发布订阅
 */
 
 import (
@@ -182,7 +186,7 @@ func handleConn(conn net.Conn){
 
 	defer conn.Close()
 
-	//announcement
+	//announcement,建立连接的时候就监听，方便信息的发送
 	go func ()  {
 		for {
 			msg := <-announcements
@@ -218,7 +222,7 @@ func handleConn(conn net.Conn){
 	scanBPM := bufio.NewScanner(conn) 	//buff就是内存临时存储
 
 
-	//the main task is creating block 
+	//add candidate
 	go func(){	
 		for {
 			for scanBPM.Scan(){
@@ -346,15 +350,13 @@ func pickWinner(){
 
 func main(){
 	
-	err := godotenv.Load() //if we need it,
+	err := godotenv.Load() 
 	if err != nil {
 		log.Fatal(err)
 	}
 	
 	// create genesis block 
 	t := time.Now()
-
-	// this is convenient for reducer declare
 	genesisBlock := Block{}
 	genesisBlock = Block{0, t.String(), 0, calculateBlockHash(genesisBlock), "", ""}
 	spew.Dump(genesisBlock)
@@ -369,7 +371,7 @@ func main(){
 	log.Println("TCP Server Listening on port :", os.Getenv("ADDR"))
 	defer server.Close()
 
-
+	//2）candidate给tempBlock传递弹药
 	go func(){
 		for candidate := range candidateBlocks {
 			mutex.Lock()
@@ -378,13 +380,14 @@ func main(){
 		}
 	}()
 
+	//3）选出胜者，产生block
 	go func() {
 		for {
 			pickWinner()
 		}
 	}()
 
-	//handleConn是建立连接之后往candidateBlock中加
+	//1）启动客户端，candidate开始
 	for {
 		conn, err := server.Accept()
 		if err != nil {
