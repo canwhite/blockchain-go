@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -185,8 +186,38 @@ func handleStream(s net.Stream){
 
 
 func readData(rw  *bufio.ReadWriter){
-	//todo
-
+	for{
+		str, err := rw.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		if str == ""{
+			return
+		}
+		if str != "\n" {
+			// 这里的0表示创建一个空的Block切片，用于后续存储解析后的区块链数据
+			// 相当于初始化一个空的区块链容器
+			chain := make([]Block, 0)
+			//然后往下进行
+			// &chain 表示将 chain 变量的内存地址传递给 json.Unmarshal 函数
+			// 在 JSON 解码时，解码结果会被直接存入 chain 变量中
+			if err := json.Unmarshal([]byte(str), &chain); err != nil {
+				log.Fatal(err)
+			}
+			//这种算是读，也就是reading
+			mutex.Lock()
+			if len(chain) > len(Blockchain) {
+				Blockchain = chain
+				bytes,err := json.MarshalIndent(Blockchain,"","	")
+				if err != nil{
+					log.Fatal(err)
+				}
+				//这行Go代码 fmt.Printf("\x1b[32m%s\x1b[0m> ", string(bytes)) 的作用是在终端中显示绿色文本
+				fmt.Printf("\x1b[32m%s\x1b[0m> ", string(bytes))
+			}
+			mutex.Unlock()
+		}
+	}
 }
 func writeData(rw * bufio.ReadWriter){
 	//todo
