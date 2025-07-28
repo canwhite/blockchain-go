@@ -29,6 +29,11 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+/**
+We can be both a host (receive connections) and a peer (connect to other hosts).
+This is what makes this system truly P2P!
+*/
+
 // Block represents each 'item' in the blockchain
 type Block struct {
 	Index     int
@@ -301,7 +306,15 @@ func main(){
 	Hash      string
 	PrevHash  string
 	*/
-	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
+	// 先创建创世区块的基本结构
+	genesisBlock = Block{
+		Index:     0,
+		Timestamp: t.String(),
+		BPM:       0,
+		PrevHash:  "",
+	}
+	// 然后计算哈希
+	genesisBlock.Hash = calculateHash(genesisBlock)
 	Blockchain = append(Blockchain, genesisBlock)
 
 	golog.SetAllLoggers(golog.LevelInfo) // Change to DEBUG for extra info
@@ -337,6 +350,8 @@ func main(){
 		select {} // hang forever。程序不退出，整个程序保持活跃状态
 
 	}else{ //拨打模式，主动向peer拨打
+		//If we do want to connect to another host we move onto the else section
+		//We set our handler again, since we’re acting as a host AND a connecting peer.
 		ha.SetStreamHandler("/p2p/1.0.0", handleStream)
 		// The following code extracts target's peer ID from the
 		// given multiaddress
