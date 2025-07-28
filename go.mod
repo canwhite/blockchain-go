@@ -53,6 +53,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/ginkgo/v2 v2.22.2 // indirect
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
+	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pion/datachannel v1.5.10 // indirect
 	github.com/pion/dtls/v2 v2.2.12 // indirect
@@ -101,11 +102,11 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/ipfs/go-cid v0.5.0 // indirect
+	github.com/ipfs/go-log v1.0.5
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/libp2p/go-libp2p-core v0.0.1 // indirect
 	github.com/libp2p/go-libp2p-crypto v0.1.0
-	github.com/libp2p/go-libp2p-net v0.1.0
 	github.com/libp2p/go-libp2p-net v0.1.0
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
@@ -119,6 +120,7 @@ require (
 	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
+	github.com/whyrusleeping/go-logging v0.0.1
 	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa // indirect
 	golang.org/x/sys v0.30.0 // indirect

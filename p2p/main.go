@@ -2,22 +2,30 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	mrand "math/rand"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	golog "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
-	net "github.com/libp2p/go-libp2p-net"
-	crypto "github.com/libp2p/go-libp2p/core/crypto"
-	host "github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -175,7 +183,7 @@ func makeBasicHost(listenPort int, secio bool, randseed int64)(host.Host, error)
 }
 
 //处理输入数据流
-func handleStream(s net.Stream){
+func handleStream(s network.Stream){
 	log.Println("Got a new stream!")
 	//creating a buffer stream for non blocking read and write
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
@@ -219,8 +227,176 @@ func readData(rw  *bufio.ReadWriter){
 		}
 	}
 }
-func writeData(rw * bufio.ReadWriter){
-	//todo
+func writeData(rw *bufio.ReadWriter) {
+	// Goroutine for periodic blockchain data sending
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			// 读取
+			mutex.Lock()
+			bytes, err := json.Marshal(Blockchain)
+			if err != nil {
+				log.Println(err)
+			}
+			mutex.Unlock()
+			// 输出
+			mutex.Lock()
+			rw.WriteString(fmt.Sprintf("%s\n", string(bytes)))
+			// 这行代码的作用是将缓冲区中的数据强制写入底层io.Writer
+			// 确保所有缓冲的数据都被发送到网络连接中
+			// 如果不调用Flush(), 数据可能只会留在缓冲区而不会实际发送
+			rw.Flush()
+			mutex.Unlock()
+		}
+	}()
+
+	// Separate goroutine for user input handling
+	go func() {
+		stdReader := bufio.NewReader(os.Stdin)
+
+		for {
+			fmt.Print("> ")
+			sendData, err := stdReader.ReadString('\n')
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			sendData = strings.Replace(sendData, "\n", "", -1)
+			bpm, err := strconv.Atoi(sendData)
+			if err != nil {
+				log.Fatal(err)
+			}
+			newBlock := generateBlock(Blockchain[len(Blockchain)-1], bpm)
+
+			if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+				mutex.Lock()
+				Blockchain = append(Blockchain, newBlock)
+				mutex.Unlock()
+			}
+
+			bytes, err := json.Marshal(Blockchain)
+			if err != nil {
+				log.Println(err)
+			}
+
+			spew.Dump(Blockchain)
+
+			mutex.Lock()
+			rw.WriteString(fmt.Sprintf("%s\n", string(bytes)))
+			rw.Flush()
+			mutex.Unlock()
+		}
+	}()
 }
 
 
+func main(){
+	//创世区块儿
+	t := time.Now()
+	genesisBlock := Block{}
+	/* 
+	Index     int
+	Timestamp string
+	BPM       int
+	Hash      string
+	PrevHash  string
+	*/
+	genesisBlock = Block{0, t.String(), 0, calculateHash(genesisBlock), ""}
+	Blockchain = append(Blockchain, genesisBlock)
+
+	golog.SetAllLoggers(golog.LevelInfo) // Change to DEBUG for extra info
+
+	//parse options，这里返回的都是地址
+	//-l 指定监听端口
+	listenF := flag.Int("l", 0, "wait for incoming connections")
+	//-d 指定要连接的目标节点地址
+	target := flag.String("d", "", "target peer to dial")
+	//-secio 启用secio加密通道
+	secio := flag.Bool("secio", false, "enable secio")
+	//-seed：设置随机种子用于节点ID生成
+	seed := flag.Int64("seed", 0, "set random seed for id generation")
+	flag.Parse()
+
+
+	if *listenF == 0 {
+		log.Fatal("Please provide a port to bind on with -l")
+	}
+
+	//make a host that listens on the given multi address
+	ha, err := makeBasicHost(*listenF,*secio,*seed)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	//监听模式
+	if *target == "" {
+		log.Println("listening for connections")
+		// Set a stream handler on host A. /p2p/1.0.0 is
+		// a user-defined protocol name.
+		ha.SetStreamHandler("/p2p/1.0.0", handleStream)
+		select {} // hang forever。程序不退出，整个程序保持活跃状态
+
+	}else{ //拨打模式，主动向peer拨打
+		ha.SetStreamHandler("/p2p/1.0.0", handleStream)
+		// The following code extracts target's peer ID from the
+		// given multiaddress
+		// /ip4/127.0.0.1/tcp/10000/p2p/QmPeerID
+		// /ip4/127.0.0.1 - IPv4地址
+		// /tcp/10000 - TCP端口
+		// /p2p/QmPeerID - 节点的PeerID（可选）
+		ipfsaddr, err := ma.NewMultiaddr(*target)
+		if err != nil{
+			log.Fatalln(err)	
+		}
+
+		// 解析目标地址中的PeerID
+		// ipipfsaddr.ValueForProtocol(ma.P_IPFS) 会从多地址中提取出 /p2p/ 后面的部分
+		// 例如对于地址 /ip4/127.0.0.1/tcp/10000/p2p/QmPeerID
+		// 这里提取出来的pid就是 "QmPeerID" 这个字符串
+
+		pid, err := ipfsaddr.ValueForProtocol(ma.P_P2P)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// 这里需要解码是因为从多地址中提取的pid是Base58编码的字符串形式
+		// peer.IDB58Decode的作用是将Base58编码的PeerID字符串转换为二进制格式的PeerID对象
+		// 这是必要的因为:
+		// 1. 网络传输和加密操作需要使用二进制格式的PeerID
+		// 2. Base58编码只是用于人类可读和URL安全的表示
+		// 3. 解码后可以验证PeerID的格式是否正确
+		peerid, err := peer.Decode(pid)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		
+		// Decapsulate操作会从多地址中移除指定的协议部分
+		// 例如原地址是 /ip4/127.0.0.1/tcp/10000/p2p/QmPeerID
+		// 这里会先创建 /p2p/QmPeerID 部分的多地址
+		// 然后从原地址中移除这部分，得到 /ip4/127.0.0.1/tcp/10000
+		// 这样我们就分离出了基础网络地址和peer ID两部分
+		targetPeerAddr, _ := ma.NewMultiaddr(
+			fmt.Sprintf("/ipfs/%s", peerid.String()))
+		//so target address 就是/ip4/127.0.0.1/tcp/10000
+		targetAddr := ipfsaddr.Decapsulate(targetPeerAddr)
+
+		// We have a peer ID and a targetAddr so we add it to the peerstore
+		// so LibP2P knows how to contact it
+		ha.Peerstore().AddAddr(peerid,targetAddr, peerstore.PermanentAddrTTL)
+		log.Println("opening stream")
+		// make a new stream from host B to host A
+		// it should be handled on host A by the handler we set above because
+		// we use the same /p2p/1.0.0 protocol
+		s, err := ha.NewStream(context.Background(), peerid, "/p2p/1.0.0")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// Create a buffered stream so that read and writes are non blocking.
+		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+		// Create a thread to read and write data.
+		go writeData(rw)
+		go readData(rw)
+		
+		select{}
+	}
+
+}
