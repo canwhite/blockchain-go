@@ -85,10 +85,16 @@ func (eb *EventBus) Publish(topic string, data any) {
 		return
 	}
 	// select 是 Go 语言中用于处理多个 channel 操作的控制结构。它的作用类似于 switch，但每个 case 语句都是一个 channel 的收发操作。
-	// select 会监听所有 case 中的 channel，只要其中有一个可以进行（如发送或接收不会阻塞），就会执行对应的 case。
-	// 如果多个 case 同时满足条件，select 会随机选择一个执行。
-	// 如果所有 case 都阻塞，并且有 default 分支，则会执行 default 分支；如果没有 default，则 select 会一直阻塞，直到有 case 可以执行。
-	// 这种机制常用于实现超时处理、消息多路复用等并发场景。
+	/*
+	select {
+	case <-ch1:
+		// 如果ch1有数据可读，执行此分支
+	case ch2 <- x:
+		// 如果ch2可以写入数据，执行此分支
+	default:
+		// 如果以上case都不满足，执行此分支
+	}
+	*/
 	select {
 	case q <- data:
 	default:
