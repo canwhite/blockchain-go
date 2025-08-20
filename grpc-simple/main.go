@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	// "google.golang.org/grpc/credentials/insecure" 是 Go gRPC 官方库提供的一个包，用于创建不安全（即不加密、不验证身份）的 gRPC 连接凭证（credentials）。
-	// 在开发和测试环境下，为了简化配置，可以用 insecure.NewCredentials() 让客户端和服务端以明文方式通信，无需 TLS 证书。
-	// 生产环境下建议使用安全的 TLS 连接，而不是 insecure。
+	// "google.golang.org/grpc/credentials/insecure" 是 Go gRPC 官方库提供的一个包，
+	// 用于创建不安全（即不加密、不验证身份）的 gRPC 连接凭证（credentials）。
 	"google.golang.org/grpc/credentials/insecure"
 	"grpc-simple/helloworld"
 )
@@ -18,10 +17,6 @@ import (
 const port = ":50051"
 
 type server struct {
-	// helloworld.UnimplementedGreeterServer 是由 protoc 工具自动生成的结构体，实现了 GreeterServer 接口的所有方法（但方法体只是返回未实现的错误）。
-	// 这样做的目的是：当你嵌入 UnimplementedGreeterServer 到你自己的 server 结构体时，如果你没有实现某个接口方法，程序不会编译报错，而是在运行时返回“未实现”错误。
-	// 这有助于向后兼容和接口升级。你只需要实现你关心的方法，其他方法会自动有默认实现。
-	// 例如这里 server 结构体嵌入了 UnimplementedGreeterServer，只实现了 SayHello 方法，其他方法（如果 proto 里有）会自动返回未实现。
 	helloworld.UnimplementedGreeterServer
 }
 

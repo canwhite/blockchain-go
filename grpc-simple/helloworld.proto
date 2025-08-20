@@ -1,43 +1,18 @@
-syntax = "proto3";
+syntax = "proto3"; //指定使用 Protocol Buffers 的第 3 版语法。
 
-package helloworld;
+package helloworld; //定义 proto 文件的包名为 helloworld，便于代码生成时的命名空间管理。
 
-option go_package = "./helloworld";
+option go_package = "./helloworld"; //指定生成的 Go 代码包路径为 ./helloworld，方便 Go 项目结构管理。
 
-service Greeter {
+service Greeter { //
   rpc SayHello (HelloRequest) returns (HelloReply);
 }
 
-message HelloRequest {
+message HelloRequest { //
   string name = 1;
 }
 
-message HelloReply {
+message HelloReply { //
   string message = 1;
 }
-// 以上是一个 gRPC 的 Protocol Buffers (proto) 文件，定义了一个简单的“Hello World”服务。
-// 具体解释如下：
-//
-// 1. `syntax = "proto3";`
-//    指定使用 Protocol Buffers 的第 3 版语法。
-//
-// 2. `package helloworld;`
-//    定义 proto 文件的包名为 helloworld，便于代码生成时的命名空间管理。
-//
-// 3. `option go_package = "./helloworld";`
-//    指定生成的 Go 代码包路径为 ./helloworld，方便 Go 项目结构管理。
-//
-// 4. `service Greeter {...}`
-//    定义了一个名为 Greeter 的 gRPC 服务。
-//    - 其中有一个方法 `SayHello`，接收 `HelloRequest` 消息，返回 `HelloReply` 消息。
-//
-// 5. `message HelloRequest {...}`
-//    定义了请求消息类型 HelloRequest，包含一个字符串字段 name，编号为 1。
-//
-// 6. `message HelloReply {...}`
-//    定义了响应消息类型 HelloReply，包含一个字符串字段 message，编号为 1。
-//
-// 总结：
-// 该 proto 文件定义了一个简单的 gRPC 服务接口，客户端可以通过调用 SayHello 方法，发送一个包含 name 字段的请求，服务端返回一个包含 message 字段的响应。常用于 gRPC 入门示例。
-//
-// 生成 Go 代码时，会自动生成消息类型和服务接口，便于在 Go 语言中实现和调用该服务。
+
