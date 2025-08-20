@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package blockchain;
+
+option go_package = "./blockchain";
+
+// Blockchain service definition
+service BlockchainService {
+  // Get block by hash
+  rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
+  
+  // Get latest block
+  rpc GetLatestBlock(GetLatestBlockRequest) returns (GetLatestBlockResponse);
+  
+  // Add new transaction
+  rpc AddTransaction(AddTransactionRequest) returns (AddTransactionResponse);
+  
+  // Get transaction by hash
+  rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
+  
+  // Stream new blocks as they are added
+  rpc SubscribeBlocks(SubscribeBlocksRequest) returns (stream Block);
+}
+
+// Block message
+message Block {
+  string hash = 1;
+  string previous_hash = 2;
+  int64 timestamp = 3;
+  repeated Transaction transactions = 4;
+  int32 nonce = 5;
+  int32 height = 6;
+}
+
+// Transaction message
+message Transaction {
+  string hash = 1;
+  string from = 2;
+  string to = 3;
+  double amount = 4;
+  int64 timestamp = 5;
+  string signature = 6;
+}
+
+// GetBlock request/response
+message GetBlockRequest {
+  string hash = 1;
+}
+
+message GetBlockResponse {
+  Block block = 1;
+  bool found = 2;
+}
+
+// GetLatestBlock request/response
+message GetLatestBlockRequest {}
+
+message GetLatestBlockResponse {
+  Block block = 1;
+}
+
+// AddTransaction request/response
+message AddTransactionRequest {
+  Transaction transaction = 1;
+}
+
+message AddTransactionResponse {
+  bool success = 1;
+  string message = 2;
+  string transaction_hash = 3;
+}
+
+// GetTransaction request/response
+message GetTransactionRequest {
+  string hash = 1;
+}
+
+message GetTransactionResponse {
+  Transaction transaction = 1;
+  bool found = 2;
+}
+
+// SubscribeBlocks request
+message SubscribeBlocksRequest {}

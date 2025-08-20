@@ -77,6 +77,7 @@ func (eb *EventBus) Subscribe(topic string, fn Handler) {
 
 // 发布：传递结果
 func (eb *EventBus) Publish(topic string, data any) {
+	// 是的，除了RLock（读锁），还有WLock（写锁），即Lock()和Unlock()。RLock允许多个读操作并发，但写操作（Lock）是独占的，写锁期间不能有其他读或写。
 	eb.mu.RLock()
 	q, ok := eb.queues[topic]
 	eb.mu.RUnlock()
