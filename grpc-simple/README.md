@@ -91,6 +91,44 @@ go run client.go
 go run client.go Alice
 ```
 
+## 实现总结 (Server vs Client)
+
+### Server (服务端)
+
+**功能**: 启动 gRPC 服务器，监听客户端的问候请求
+
+**主要步骤**:
+
+1. 创建 TCP 监听器 (`net.Listen`) 在端口 50051
+2. 创建 gRPC 服务器实例 (`grpc.NewServer()`)
+3. 注册 Greeter 服务实现 (`helloworld.RegisterGreeterServer`)
+4. 启动服务监听 (`server.Serve`)，阻塞等待客户端连接
+5. 实现`SayHello`方法：接收客户端发送的名字参数，返回"Hello + 名字"的响应
+
+**核心逻辑**: `main.go:23-26` - 实现 gRPC 服务接口，处理客户端请求
+
+### Client (客户端)
+
+**功能**: 连接服务器并发送问候请求
+
+**主要步骤**:
+
+1. 建立到服务器的连接 (`grpc.Dial`)，使用不安全传输模式
+2. 创建 Greeter 客户端实例 (`helloworld.NewGreeterClient`)
+3. 准备请求数据 (默认"world"或命令行参数)
+4. 调用`SayHello`方法发送 gRPC 请求，设置 1 秒超时
+5. 打印服务器返回的问候消息
+
+**核心逻辑**: `main.go:77` - 发起 gRPC 调用，获取服务器响应
+
+### 通信流程
+
+```
+Client --(TCP连接)--> Server
+Client --SayHello(name)--> Server
+Server --HelloReply(message)--> Client
+```
+
 ## Expected Output
 
 **Server output:**
