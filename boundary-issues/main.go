@@ -6,6 +6,8 @@ import (
 	"os"
 	"io"
 	"sync"
+	"bytes"
+	"json"
 )
 
 //===========1.优先使用值类型，只在必要的时候使用指针=========================
@@ -136,6 +138,57 @@ func (c *Cache)Get(key string) interface{}{
 }
 
 //===========5.对于频繁创建和销毁的对象，建议使用对象池，减少gc压力，提高性能=====
+// sync.Pool 提供了一个轻量级的对象池，允许我们将用完的对象放回池中，下次需要时直接复用，避免了重复分配和回收。
+var bufferPool = sync.Pool{
+	New: func() interface{}{
+		// buffer（缓冲区）是一个用于临时存储数据的内存区域。可以高效地拼接、追加、读取字节数据，
+		// 常用于 I/O 操作、字符串拼接、序列化等场景，避免频繁的内存分配和拷贝。
+		return new(bytes.Buffer)
+	},
+}
+
+func getBuffer() *bytes.Buffer {
+	//.(*bytes.Buffer)是断言，因为Get得到的是interface，它可以是任何类型
+	return bufferPool.Get().(*bytes.Buffer)
+}
+
+func putBuffer(buf *bytes.Buffer){
+	buf.Reset()
+    bufferPool.Put(buf)
+}
+
+func processData(data []byte){
+	buf := getBuffer()
+    defer putBuffer(buf)
+
+    buf.Write(data)
+    // 处理数据...
+}
+
+
+// bufferPool 除了可以反复声明 bytes.Buffer 实例用于高效复用（如序列化、临时缓冲等），还可以用来存放和复用其他类型的对象，减少频繁分配和回收带来的GC压力。
+type MyStruct struct {
+	Data []int
+}
+
+var myStructPool = sync.Pool{
+	New: func() interface{} {
+		return &MyStruct{
+			Data: make([]int, 0, 100),
+		}
+	},
+}
+
+// 使用示例
+func UseMyStructPool() {
+	obj := myStructPool.Get().(*MyStruct)
+	// 使用 obj
+	obj.Data = obj.Data[:0] // 清空数据，准备复用
+	// ... 业务逻辑 ...
+	myStructPool.Put(obj) // 用完放回池中
+	
+}
+
 func main(){
 	p := Point{1,2}
 	p = p.Move(3,4)
